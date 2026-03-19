@@ -9,17 +9,17 @@
   <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --black:    #080807;
-      --ink:      #111110;
-      --surface:  #161614;
-      --raised:   #1c1c1a;
-      --line:     rgba(255,248,230,0.08);
-      --line2:    rgba(255,248,230,0.14);
+      --black:    #0f0f0d;
+      --ink:      #181816;
+      --surface:  #201f1c;
+      --raised:   #272521;
+      --line:     rgba(255,248,230,0.13);
+      --line2:    rgba(255,248,230,0.22);
       --cream:    #f5efdf;
-      --cream2:   #c8bfa8;
+      --cream2:   #d4cab6;
       --gold:     #c9a96e;
       --gold2:    #e8c98a;
-      --muted:    rgba(245,239,223,0.35);
+      --muted:    rgba(245,239,223,0.55);
       --serif:    'Cormorant Garamond', Georgia, serif;
       --sans:     'Jost', sans-serif;
     }
@@ -351,7 +351,7 @@
       display: flex;
       flex-direction: column;
       min-width: 0;
-      background: var(--black);
+      background: var(--surface);
     }
 
     .chat-header {
@@ -390,6 +390,7 @@
       display: flex;
       flex-direction: column;
       scroll-behavior: smooth;
+      background: var(--surface);
     }
 
     .messages::-webkit-scrollbar { width: 3px; }
@@ -559,7 +560,23 @@
     .send-btn:hover { color: var(--gold); }
     .send-btn svg { width: 13px; height: 13px; }
 
-    @media (max-width: 640px) {
+    .sidebar-toggle {
+      background: none;
+      border: 1px solid var(--line2);
+      color: var(--muted);
+      cursor: pointer;
+      padding: 6px 8px;
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      transition: all 0.2s;
+      flex-shrink: 0;
+    }
+    .sidebar-toggle:hover { border-color: var(--gold); color: var(--gold); }
+    .sidebar-toggle svg { width: 16px; height: 16px; }
+    .sidebar.hidden { display: none; }
+
+        @media (max-width: 640px) {
       .sidebar { display: none; }
       .messages { padding: 24px 20px; }
       .input-zone { padding: 14px 20px 20px; }
@@ -588,10 +605,12 @@
       <label class="field-label" for="room-input">Room</label>
       <input class="field-input" id="room-input" type="text" placeholder="Enter or choose a room…" maxlength="30" autocomplete="off" />
       <div class="room-options">
-        <div class="room-pill" onclick="selectRoom('salon', this)">Salon</div>
-        <div class="room-pill" onclick="selectRoom('atelier', this)">Atelier</div>
-        <div class="room-pill" onclick="selectRoom('library', this)">Library</div>
-        <div class="room-pill" onclick="selectRoom('lounge', this)">Lounge</div>
+        <div class="room-pill" onclick="selectRoom('general', this)">General</div>
+        <div class="room-pill" onclick="selectRoom('tech', this)">Tech</div>
+        <div class="room-pill" onclick="selectRoom('random', this)">Random</div>
+        <div class="room-pill" onclick="selectRoom('gaming', this)">Gaming</div>
+        <div class="room-pill" onclick="selectRoom('music', this)">Music</div>
+        <div class="room-pill" onclick="selectRoom('study', this)">Study</div>
       </div>
     </div>
 
@@ -626,7 +645,12 @@
 
     <main class="chat">
       <div class="chat-header">
-        <div class="chat-room-name" id="header-room">salon</div>
+        <div style="display:flex;align-items:center;gap:14px">
+          <button class="sidebar-toggle" onclick="toggleSidebar()" title="Toggle sidebar">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"><line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/></svg>
+          </button>
+          <div class="chat-room-name" id="header-room">salon</div>
+        </div>
         <div class="chat-meta" id="header-meta">Connected</div>
       </div>
       <div class="messages" id="messages">
@@ -783,6 +807,10 @@
   function scrollEnd() {
     const m = document.getElementById("messages");
     m.scrollTop = m.scrollHeight;
+  }
+
+  function toggleSidebar() {
+    document.querySelector(".sidebar").classList.toggle("hidden");
   }
 
   document.addEventListener("DOMContentLoaded", () => {
