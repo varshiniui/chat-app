@@ -1,0 +1,811 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Murmur</title>
+  <script src="https://cdn.socket.io/4.7.2/socket.io.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;0,500;1,300;1,400&family=Jost:wght@300;400;500&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --black:    #080807;
+      --ink:      #111110;
+      --surface:  #161614;
+      --raised:   #1c1c1a;
+      --line:     rgba(255,248,230,0.08);
+      --line2:    rgba(255,248,230,0.14);
+      --cream:    #f5efdf;
+      --cream2:   #c8bfa8;
+      --gold:     #c9a96e;
+      --gold2:    #e8c98a;
+      --muted:    rgba(245,239,223,0.35);
+      --serif:    'Cormorant Garamond', Georgia, serif;
+      --sans:     'Jost', sans-serif;
+    }
+
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+    ::selection { background: var(--gold); color: var(--black); }
+
+    html, body {
+      height: 100%;
+      background: var(--black);
+      color: var(--cream);
+      font-family: var(--sans);
+      font-weight: 300;
+      letter-spacing: 0.01em;
+      overflow: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='1'/%3E%3C/svg%3E");
+      opacity: 0.025;
+      pointer-events: none;
+      z-index: 9999;
+    }
+
+    /* ══ LOGIN ══ */
+    #login-screen {
+      position: fixed;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: var(--black);
+      z-index: 50;
+    }
+
+    #login-screen::before,
+    #login-screen::after {
+      content: '';
+      position: absolute;
+      width: 320px;
+      height: 320px;
+      border: 1px solid var(--line);
+      pointer-events: none;
+    }
+    #login-screen::before { top: -1px; left: -1px; border-right: none; border-bottom: none; }
+    #login-screen::after  { bottom: -1px; right: -1px; border-left: none; border-top: none; }
+
+    .login-wrap {
+      width: 400px;
+      max-width: 92vw;
+      animation: fadeRise 0.7s cubic-bezier(0.16, 1, 0.3, 1) both;
+    }
+
+    @keyframes fadeRise {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .brand { margin-bottom: 52px; }
+
+    .brand-name {
+      font-family: var(--serif);
+      font-size: 56px;
+      font-weight: 300;
+      letter-spacing: 0.14em;
+      color: var(--cream);
+      line-height: 1;
+    }
+
+    .brand-rule {
+      width: 36px;
+      height: 1px;
+      background: var(--gold);
+      margin: 14px 0 10px;
+    }
+
+    .brand-tagline {
+      font-size: 9.5px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--muted);
+      font-weight: 400;
+    }
+
+    .field { margin-bottom: 28px; }
+
+    .field-label {
+      display: block;
+      font-size: 9px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--gold);
+      margin-bottom: 10px;
+      font-weight: 500;
+    }
+
+    .field-input {
+      width: 100%;
+      background: transparent;
+      border: none;
+      border-bottom: 1px solid var(--line2);
+      padding: 10px 0;
+      color: var(--cream);
+      font-family: var(--serif);
+      font-size: 21px;
+      font-weight: 300;
+      letter-spacing: 0.04em;
+      outline: none;
+      transition: border-color 0.3s;
+    }
+
+    .field-input::placeholder { color: var(--muted); font-style: italic; }
+    .field-input:focus { border-color: var(--gold); }
+
+    .room-options {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .room-pill {
+      border: 1px solid var(--line2);
+      padding: 5px 14px;
+      font-size: 9.5px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+      cursor: pointer;
+      color: var(--muted);
+      transition: all 0.2s;
+      font-family: var(--sans);
+      font-weight: 400;
+    }
+
+    .room-pill:hover, .room-pill.active {
+      border-color: var(--gold);
+      color: var(--gold);
+      background: rgba(201,169,110,0.06);
+    }
+
+    .enter-btn {
+      margin-top: 44px;
+      width: 100%;
+      background: transparent;
+      border: 1px solid var(--cream2);
+      padding: 16px 32px;
+      color: var(--cream);
+      font-family: var(--serif);
+      font-size: 18px;
+      font-weight: 300;
+      letter-spacing: 0.18em;
+      cursor: pointer;
+      transition: all 0.3s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .enter-btn::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      background: var(--gold);
+      transform: scaleX(0);
+      transform-origin: left;
+      transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+      z-index: 0;
+    }
+
+    .enter-btn:hover::before { transform: scaleX(1); }
+    .enter-btn:hover { color: var(--black); border-color: var(--gold); }
+    .enter-btn span { position: relative; z-index: 1; }
+
+    /* ══ APP ══ */
+    #app {
+      display: none;
+      height: 100vh;
+      width: 100%;
+    }
+
+    .layout {
+      display: flex;
+      height: 100%;
+    }
+
+    /* SIDEBAR */
+    .sidebar {
+      width: 240px;
+      flex-shrink: 0;
+      background: var(--ink);
+      border-right: 1px solid var(--line);
+      display: flex;
+      flex-direction: column;
+      padding: 36px 0;
+    }
+
+    .sidebar-brand {
+      padding: 0 28px 32px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .sidebar-brand-name {
+      font-family: var(--serif);
+      font-size: 28px;
+      font-weight: 300;
+      letter-spacing: 0.14em;
+      color: var(--cream);
+    }
+
+    .brand-accent {
+      display: inline-block;
+      width: 4px;
+      height: 4px;
+      background: var(--gold);
+      border-radius: 50%;
+      vertical-align: super;
+      margin-left: 2px;
+    }
+
+    .sidebar-section { padding: 28px 28px 0; }
+
+    .sidebar-label {
+      font-size: 8px;
+      letter-spacing: 0.35em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 500;
+      margin-bottom: 12px;
+      display: block;
+    }
+
+    .current-room {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 300;
+      font-style: italic;
+      color: var(--cream);
+      margin-bottom: 6px;
+    }
+
+    .status-line {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      font-size: 10px;
+      letter-spacing: 0.15em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    .live-dot {
+      width: 5px;
+      height: 5px;
+      background: #6fcf97;
+      border-radius: 50%;
+      animation: breathe 2.4s ease-in-out infinite;
+    }
+
+    @keyframes breathe {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50%       { opacity: 0.4; transform: scale(0.7); }
+    }
+
+    .divider {
+      height: 1px;
+      background: var(--line);
+      margin: 24px 28px;
+    }
+
+    .user-list {
+      list-style: none;
+      padding: 0 28px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .user-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+      font-size: 13px;
+      color: var(--muted);
+      letter-spacing: 0.04em;
+    }
+
+    .user-item.me { color: var(--cream2); }
+
+    .monogram {
+      width: 24px;
+      height: 24px;
+      border: 1px solid var(--line2);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 9px;
+      font-weight: 500;
+      letter-spacing: 0.05em;
+      flex-shrink: 0;
+    }
+
+    .sidebar-footer {
+      margin-top: auto;
+      padding: 20px 28px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .leave-btn {
+      background: none;
+      border: none;
+      font-family: var(--sans);
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--muted);
+      cursor: pointer;
+      transition: color 0.2s;
+      padding: 0;
+    }
+
+    .leave-btn:hover { color: var(--cream); }
+
+    /* CHAT */
+    .chat {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      min-width: 0;
+      background: var(--black);
+    }
+
+    .chat-header {
+      padding: 22px 40px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--ink);
+      flex-shrink: 0;
+    }
+
+    .chat-room-name {
+      font-family: var(--serif);
+      font-size: 22px;
+      font-weight: 300;
+      font-style: italic;
+      letter-spacing: 0.04em;
+      color: var(--cream);
+    }
+
+    .chat-room-name::before { content: '— '; color: var(--gold); font-style: normal; }
+
+    .chat-meta {
+      font-size: 10px;
+      letter-spacing: 0.2em;
+      color: var(--muted);
+      text-transform: uppercase;
+    }
+
+    /* MESSAGES */
+    .messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 36px 40px;
+      display: flex;
+      flex-direction: column;
+      scroll-behavior: smooth;
+    }
+
+    .messages::-webkit-scrollbar { width: 3px; }
+    .messages::-webkit-scrollbar-track { background: transparent; }
+    .messages::-webkit-scrollbar-thumb { background: var(--line2); }
+
+    .msg-block {
+      padding: 14px 0;
+      animation: msgIn 0.28s ease both;
+    }
+
+    @keyframes msgIn {
+      from { opacity: 0; transform: translateY(6px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    .msg-block.mine { text-align: right; }
+
+    .msg-meta {
+      display: flex;
+      align-items: baseline;
+      gap: 12px;
+      margin-bottom: 8px;
+    }
+
+    .msg-block.mine .msg-meta { justify-content: flex-end; }
+
+    .msg-author {
+      font-size: 10px;
+      font-weight: 500;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--gold);
+    }
+
+    .msg-block.mine .msg-author { color: var(--cream2); }
+
+    .msg-ts {
+      font-size: 9px;
+      letter-spacing: 0.1em;
+      color: var(--muted);
+    }
+
+    .msg-body {
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 300;
+      line-height: 1.6;
+      color: var(--cream);
+      letter-spacing: 0.01em;
+      max-width: 62%;
+      word-break: break-word;
+    }
+
+    .msg-block.mine .msg-body {
+      margin-left: auto;
+      color: var(--cream2);
+    }
+
+    .sys-msg {
+      text-align: center;
+      padding: 18px 0;
+      font-size: 9.5px;
+      letter-spacing: 0.22em;
+      text-transform: uppercase;
+      color: rgba(255,248,230,0.2);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+    }
+
+    .sys-msg::before, .sys-msg::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--line);
+    }
+
+    .typing-row {
+      padding: 0 40px 8px;
+      font-family: var(--serif);
+      font-size: 15px;
+      font-style: italic;
+      color: var(--muted);
+      min-height: 26px;
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 18px;
+      opacity: 0.28;
+    }
+
+    .empty-rule {
+      width: 1px;
+      height: 60px;
+      background: var(--cream2);
+    }
+
+    .empty-text {
+      font-family: var(--serif);
+      font-size: 19px;
+      font-style: italic;
+      font-weight: 300;
+      color: var(--cream2);
+      letter-spacing: 0.06em;
+    }
+
+    /* INPUT */
+    .input-zone {
+      padding: 20px 40px 28px;
+      border-top: 1px solid var(--line);
+      background: var(--ink);
+      flex-shrink: 0;
+    }
+
+    .input-row {
+      display: flex;
+      align-items: flex-end;
+      gap: 16px;
+      border-bottom: 1px solid var(--line2);
+      padding-bottom: 12px;
+      transition: border-color 0.3s;
+    }
+
+    .input-row:focus-within { border-color: var(--gold); }
+
+    #msg-input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--cream);
+      font-family: var(--serif);
+      font-size: 20px;
+      font-weight: 300;
+      letter-spacing: 0.02em;
+      resize: none;
+      min-height: 28px;
+      max-height: 120px;
+      line-height: 1.5;
+    }
+
+    #msg-input::placeholder { color: var(--muted); font-style: italic; }
+
+    .send-btn {
+      background: none;
+      border: none;
+      cursor: pointer;
+      color: var(--muted);
+      padding: 4px;
+      transition: color 0.2s;
+      flex-shrink: 0;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-family: var(--sans);
+      font-size: 9px;
+      letter-spacing: 0.2em;
+      text-transform: uppercase;
+    }
+
+    .send-btn:hover { color: var(--gold); }
+    .send-btn svg { width: 13px; height: 13px; }
+
+    @media (max-width: 640px) {
+      .sidebar { display: none; }
+      .messages { padding: 24px 20px; }
+      .input-zone { padding: 14px 20px 20px; }
+      .chat-header { padding: 16px 20px; }
+      .typing-row { padding: 0 20px 8px; }
+    }
+  </style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-screen">
+  <div class="login-wrap">
+    <div class="brand">
+      <div class="brand-name">Murmur</div>
+      <div class="brand-rule"></div>
+      <div class="brand-tagline">Private real-time conversation</div>
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="username-input">Your Name</label>
+      <input class="field-input" id="username-input" type="text" placeholder="How shall we address you?" maxlength="24" autocomplete="off" />
+    </div>
+
+    <div class="field">
+      <label class="field-label" for="room-input">Room</label>
+      <input class="field-input" id="room-input" type="text" placeholder="Enter or choose a room…" maxlength="30" autocomplete="off" />
+      <div class="room-options">
+        <div class="room-pill" onclick="selectRoom('salon', this)">Salon</div>
+        <div class="room-pill" onclick="selectRoom('atelier', this)">Atelier</div>
+        <div class="room-pill" onclick="selectRoom('library', this)">Library</div>
+        <div class="room-pill" onclick="selectRoom('lounge', this)">Lounge</div>
+      </div>
+    </div>
+
+    <button class="enter-btn" onclick="joinChat()"><span>Enter the Room</span></button>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="sidebar-brand">
+        <div class="sidebar-brand-name">Murmur<span class="brand-accent"></span></div>
+      </div>
+      <div class="sidebar-section">
+        <span class="sidebar-label">Room</span>
+        <div class="current-room" id="sidebar-room">—</div>
+        <div class="status-line">
+          <span class="live-dot"></span>
+          <span id="online-count">0 present</span>
+        </div>
+      </div>
+      <div class="divider"></div>
+      <div class="sidebar-section" style="padding-bottom:0">
+        <span class="sidebar-label">In the Room</span>
+      </div>
+      <ul class="user-list" id="user-list"></ul>
+      <div class="sidebar-footer">
+        <button class="leave-btn" onclick="leaveChat()">← Depart</button>
+      </div>
+    </aside>
+
+    <main class="chat">
+      <div class="chat-header">
+        <div class="chat-room-name" id="header-room">salon</div>
+        <div class="chat-meta" id="header-meta">Connected</div>
+      </div>
+      <div class="messages" id="messages">
+        <div class="empty-state" id="empty-state">
+          <div class="empty-rule"></div>
+          <div class="empty-text">The room awaits your voice.</div>
+          <div class="empty-rule"></div>
+        </div>
+      </div>
+      <div class="typing-row" id="typing-row"></div>
+      <div class="input-zone">
+        <div class="input-row">
+          <textarea id="msg-input" rows="1" placeholder="Say something…"></textarea>
+          <button class="send-btn" onclick="sendMessage()">
+            Send
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <line x1="5" y1="12" x2="19" y2="12"/><polyline points="13 6 19 12 13 18"/>
+            </svg>
+          </button>
+        </div>
+      </div>
+    </main>
+  </div>
+</div>
+
+<script>
+  const SERVER_URL = "http://localhost:3001";
+  let socket, currentUser = "", currentRoom = "";
+  let typingTimer;
+
+  const palettes = [
+    { bg:"rgba(201,169,110,0.12)", color:"#c9a96e" },
+    { bg:"rgba(245,239,223,0.08)", color:"#c8bfa8" },
+    { bg:"rgba(111,207,151,0.1)",  color:"#6fcf97" },
+    { bg:"rgba(130,130,180,0.1)",  color:"#9090c8" },
+    { bg:"rgba(200,120,100,0.1)",  color:"#c87864" },
+  ];
+
+  function pal(name) {
+    let h = 0;
+    for (const c of name) h = c.charCodeAt(0) + ((h << 4) - h);
+    return palettes[Math.abs(h) % palettes.length];
+  }
+
+  function ini(n)  { return n.slice(0,2).toUpperCase(); }
+  function fmt(ts) { return new Date(ts).toLocaleTimeString([],{hour:"2-digit",minute:"2-digit"}); }
+  function esc(s)  { return s.replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+  function selectRoom(name, el) {
+    document.getElementById("room-input").value = name;
+    document.querySelectorAll(".room-pill").forEach(p => p.classList.remove("active"));
+    el.classList.add("active");
+  }
+
+  function joinChat() {
+    const username = document.getElementById("username-input").value.trim();
+    const room     = document.getElementById("room-input").value.trim();
+    if (!username) return alert("Please enter your name.");
+    if (!room)     return alert("Please choose a room.");
+    currentUser = username; currentRoom = room;
+
+    socket = io(SERVER_URL);
+
+    socket.on("connect", () => {
+      socket.emit("join", { username, room });
+      document.getElementById("login-screen").style.display = "none";
+      document.getElementById("app").style.display = "block";
+      document.getElementById("sidebar-room").textContent = room;
+      document.getElementById("header-room").textContent = room;
+      setTimeout(() => document.getElementById("msg-input").focus(), 80);
+    });
+
+    socket.on("connect_error", () => alert("Cannot connect to server. Make sure it's running on port 3001."));
+
+    socket.on("message_history", history => {
+      document.getElementById("messages").innerHTML = "";
+      history.forEach(m => m.type === "system" ? appendSys(m.text) : appendMsg(m));
+      scrollEnd();
+    });
+
+    socket.on("receive_message", msg => { appendMsg(msg); scrollEnd(); });
+    socket.on("system_message",  ({ text }) => { appendSys(text); scrollEnd(); });
+
+    socket.on("room_users", users => {
+      renderUsers(users);
+      document.getElementById("online-count").textContent = `${users.length} present`;
+      document.getElementById("header-meta").textContent  = `${users.length} in room`;
+    });
+
+    socket.on("user_typing", ({ username, isTyping }) => {
+      document.getElementById("typing-row").textContent = isTyping ? `${username} is composing…` : "";
+    });
+  }
+
+  function leaveChat() {
+    if (socket) socket.disconnect();
+    document.getElementById("app").style.display = "none";
+    document.getElementById("login-screen").style.display = "flex";
+    document.getElementById("messages").innerHTML =
+      `<div class="empty-state" id="empty-state">
+        <div class="empty-rule"></div>
+        <div class="empty-text">The room awaits your voice.</div>
+        <div class="empty-rule"></div>
+      </div>`;
+    document.getElementById("user-list").innerHTML = "";
+    currentUser = ""; currentRoom = "";
+  }
+
+  function sendMessage() {
+    const input = document.getElementById("msg-input");
+    const text  = input.value.trim();
+    if (!text || !socket) return;
+    socket.emit("send_message", { text });
+    input.value = "";
+    input.style.height = "auto";
+    socket.emit("typing", false);
+    clearTimeout(typingTimer);
+  }
+
+  function appendMsg(msg) {
+    document.getElementById("empty-state")?.remove();
+    const isMe = msg.username === currentUser;
+    const p = pal(msg.username);
+    const el = document.createElement("div");
+    el.className = "msg-block" + (isMe ? " mine" : "");
+    el.innerHTML = `
+      <div class="msg-meta">
+        <div class="monogram" style="background:${p.bg};color:${p.color}">${ini(msg.username)}</div>
+        <span class="msg-author">${esc(msg.username)}</span>
+        <span class="msg-ts">${fmt(msg.timestamp)}</span>
+      </div>
+      <div class="msg-body">${esc(msg.text)}</div>`;
+    document.getElementById("messages").appendChild(el);
+  }
+
+  function appendSys(text) {
+    const el = document.createElement("div");
+    el.className = "sys-msg";
+    el.textContent = text;
+    document.getElementById("messages").appendChild(el);
+  }
+
+  function renderUsers(users) {
+    document.getElementById("user-list").innerHTML = users.map(u => {
+      const p  = pal(u);
+      const me = u === currentUser;
+      return `<li class="user-item${me ? " me" : ""}">
+        <div class="monogram" style="background:${p.bg};color:${p.color}">${ini(u)}</div>
+        ${esc(u)}${me ? ` <span style="font-size:9px;opacity:.4;letter-spacing:.1em">(you)</span>` : ""}
+      </li>`;
+    }).join("");
+  }
+
+  function scrollEnd() {
+    const m = document.getElementById("messages");
+    m.scrollTop = m.scrollHeight;
+  }
+
+  document.addEventListener("DOMContentLoaded", () => {
+    const inp = document.getElementById("msg-input");
+    inp.addEventListener("keydown", e => {
+      if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); }
+    });
+    inp.addEventListener("input", function() {
+      this.style.height = "auto";
+      this.style.height = Math.min(this.scrollHeight, 120) + "px";
+      if (socket) {
+        socket.emit("typing", true);
+        clearTimeout(typingTimer);
+        typingTimer = setTimeout(() => socket.emit("typing", false), 1600);
+      }
+    });
+    document.getElementById("username-input").addEventListener("keydown", e => {
+      if (e.key === "Enter") document.getElementById("room-input").focus();
+    });
+    document.getElementById("room-input").addEventListener("keydown", e => {
+      if (e.key === "Enter") joinChat();
+    });
+  });
+</script>
+</body>
+</html>
