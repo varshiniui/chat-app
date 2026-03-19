@@ -471,11 +471,43 @@
 
     .typing-row {
       padding: 0 40px 8px;
+      min-height: 32px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .typing-label {
       font-family: var(--serif);
-      font-size: 15px;
+      font-size: 13px;
       font-style: italic;
       color: var(--muted);
-      min-height: 26px;
+      letter-spacing: 0.04em;
+    }
+
+    .pulse-dots {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .pulse-dots span {
+      display: inline-block;
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--gold);
+      opacity: 0;
+      animation: fadepulse 1.5s ease-in-out infinite;
+    }
+
+    .pulse-dots span:nth-child(1) { animation-delay: 0s; }
+    .pulse-dots span:nth-child(2) { animation-delay: 0.3s; }
+    .pulse-dots span:nth-child(3) { animation-delay: 0.6s; }
+
+    @keyframes fadepulse {
+      0%, 100% { opacity: 0; transform: scale(0.7); }
+      50%       { opacity: 1; transform: scale(1); }
     }
 
     .empty-state {
@@ -741,7 +773,14 @@
     });
 
     socket.on("user_typing", ({ username, isTyping }) => {
-      document.getElementById("typing-row").textContent = isTyping ? `${username} is composing…` : "";
+      const row = document.getElementById("typing-row");
+      if (isTyping) {
+        row.innerHTML = `
+          <div class="pulse-dots"><span></span><span></span><span></span></div>
+          <span class="typing-label">${username} is composing</span>`;
+      } else {
+        row.innerHTML = "";
+      }
     });
   }
 
