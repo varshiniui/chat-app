@@ -615,9 +615,9 @@
     .sidebar-toggle:hover { border-color: var(--gold); color: var(--gold); }
     .sidebar-toggle svg { width: 18px; height: 18px; }
     
-    .sidebar.hidden { 
-      display: none;
-    }
+   .sidebar.hidden {
+  display: none !important;
+}
 
     /* ══ MOBILE RESPONSIVE ══ */
     @media (max-width: 768px) {
@@ -638,9 +638,14 @@
       }
 
       .sidebar.hidden {
-        display: none;
-      }
-
+  display: none !important;
+}
+.sidebar.hidden ~ .chat {
+  flex: 1;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
       .sidebar-brand {
         padding: 0;
         border: none;
@@ -1465,10 +1470,18 @@
     m.scrollTop = m.scrollHeight;
   }
 
-  function toggleSidebar() {
-    document.querySelector(".sidebar").classList.toggle("hidden");
+ function toggleSidebar() {
+  const sidebar = document.querySelector(".sidebar");
+  const chat = document.querySelector(".chat");
+  sidebar.classList.toggle("hidden");
+  if (sidebar.classList.contains("hidden")) {
+    chat.style.display = "flex";
+    chat.style.flex = "1";
+    chat.style.height = "100%";
+  } else {
+    chat.style.height = "";
   }
-
+}
   document.addEventListener("DOMContentLoaded", () => {
     const inp = document.getElementById("msg-input");
     inp.addEventListener("keydown", e => {
