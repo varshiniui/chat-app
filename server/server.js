@@ -17,6 +17,7 @@ const activeUsers = new Map();
 const rooms = new Map();
 const messageHistory = new Map();
 const MAX_HISTORY = 50;
+const suggestedRooms = ["general", "tech", "random", "gaming", "music", "study"];
 
 function getRoomUsers(room) {
   return [...(rooms.get(room) || [])];
@@ -47,6 +48,11 @@ io.on("connection", (socket) => {
     activeUsers.set(socket.id, { username, room });
     if (!rooms.has(room)) rooms.set(room, new Set());
     rooms.get(room).add(username);
+
+    // Clear message history for suggested rooms when a new user joins
+    if (suggestedRooms.includes(room)) {
+      messageHistory.set(room, []);
+    }
 
     socket.emit("message_history", messageHistory.get(room) || []);
 
