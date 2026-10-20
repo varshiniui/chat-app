@@ -1,18 +1,5 @@
 # Murmur
-
-COMPANY : CODTECH IT SOLUTIONS
-
-NAME : SAHAYA VARSHINI M J
-
-INTERN ID : CTIS7104
-
-DOMAIN : FULL STAACK WEB DEVELOPMENT
-
-DURATION : 6 WEEKS
-
-MENTOR : NEELA SANTOSH
-
-A real-time chat application built with Node.js, Express, and Socket.io — CodTech Full Stack Internship Task 2.
+A real-time chat application built with Node.js, Express, and Socket.io
 
 ---
 
@@ -129,7 +116,7 @@ The typing animation uses three gold dots that fade in and out sequentially rath
 
 ## Author
 
-Built for CodTech Full Stack Internship — Task 2.
+Sahaya Varshini M J
 
 ---
 
